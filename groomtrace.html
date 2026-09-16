@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GROOMTRACE — Trace the Pattern, Not Just the Message.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F8F6EF; --ink:#23483A; --ink-soft:#4B6358; --accent:#7FA58E; --card:#E8F0EA;
+  --line: rgba(35,72,58,0.14); --white:#FFFFFF;
+  --warn:#B9793F; --warn-bg:#F3E6D6; --uncertain:#8C7F5A; --uncertain-bg:#EFE9D6;
+  --danger:#A85248; --danger-bg:#F1DCD8;
+  --font-display:'Fraunces',ui-serif,Georgia,serif; --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --radius-s:10px; --radius-m:16px; --radius-l:26px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#132720; --ink:#EDF3EF; --ink-soft:#B7C7BE; --accent:#8FBBA3; --card:#1C3A2F;
+    --line: rgba(237,243,239,0.14); --white:#0F1F19;
+    --warn:#E0A868; --warn-bg:#3A2C18; --uncertain:#CBB989; --uncertain-bg:#332E1C;
+    --danger:#E0958A; --danger-bg:#3B211E;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#132720; --ink:#EDF3EF; --ink-soft:#B7C7BE; --accent:#8FBBA3; --card:#1C3A2F;
+  --line: rgba(237,243,239,0.14); --white:#0F1F19;
+  --warn:#E0A868; --warn-bg:#3A2C18; --uncertain:#CBB989; --uncertain-bg:#332E1C;
+  --danger:#E0958A; --danger-bg:#3B211E;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-body);
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--font-display); font-weight:600; margin:0 0 .4em; line-height:1.15; letter-spacing:-0.01em;}
+p{margin:0 0 1em;}
+a{color:inherit;}
+button{font-family:var(--font-body);}
+::selection{background:var(--accent); color:var(--white);}
+.wrap{max-width:760px; margin:0 auto; padding:0 24px;}
+.wrap-wide{max-width:1040px; margin:0 auto; padding:0 24px;}
+
+/* shell */
+#shell{display:flex; min-height:100vh;}
+#sidebar{
+  width:230px; flex-shrink:0; background:var(--card); border-right:1px solid var(--line);
+  padding:28px 18px; position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+#sidebar .brand{font-family:var(--font-display); font-size:1.35rem; font-weight:600; margin-bottom:4px;}
+#sidebar .brand-tag{font-size:.78rem; color:var(--ink-soft); margin-bottom:28px; display:block; max-width:170px;}
+#sidebar nav a{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-s);
+  text-decoration:none; color:var(--ink-soft); font-size:.92rem; font-weight:500; margin-bottom:2px; cursor:pointer;
+}
+#sidebar nav a:hover{background:rgba(127,165,142,0.15); color:var(--ink);}
+#sidebar nav a.active{background:var(--accent); color:var(--white);}
+#sidebar nav .sep{height:1px; background:var(--line); margin:14px 0;}
+#main{flex:1; min-width:0; padding:40px 0 100px;}
+#topbar{display:none;}
+
+@media (max-width: 880px){
+  #sidebar{display:none;}
+  #main{padding:24px 0 92px;}
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between; padding:14px 20px;
+    border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:20;
+  }
+  #topbar .brand{font-family:var(--font-display); font-weight:600; font-size:1.1rem;}
+  #hamburger{background:none;border:none;font-size:1.4rem;color:var(--ink);cursor:pointer;padding:4px 8px;}
+  #bottomnav{
+    position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card);
+    border-top:1px solid var(--line); z-index:20; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  #bottomnav a{
+    flex:1; text-align:center; font-size:.68rem; color:var(--ink-soft); text-decoration:none;
+    padding:6px 2px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; border-radius:10px;
+  }
+  #bottomnav a.active{color:var(--accent);}
+  #bottomnav .ic{font-size:1.15rem;}
+  #drawer{
+    position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:30; display:none;
+  }
+  #drawer.open{display:block;}
+  #drawer .panel{
+    position:absolute; top:0; right:0; bottom:0; width:78%; max-width:300px; background:var(--card);
+    padding:24px 18px; overflow-y:auto;
+  }
+  #drawer nav a{display:block; padding:12px 10px; border-radius:10px; color:var(--ink); text-decoration:none; font-weight:500;}
+  #drawer nav a:hover{background:rgba(127,165,142,.15);}
+}
+
+/* generic */
+.eyebrow{font-size:.82rem; color:var(--accent); font-weight:600; margin-bottom:8px;}
+.btn{
+  display:inline-flex; align-items:center; gap:8px; border:none; border-radius:999px; padding:12px 22px;
+  font-weight:600; font-size:.95rem; cursor:pointer; background:var(--ink); color:var(--bg); transition:transform .12s ease, opacity .12s ease;
+}
+.btn:hover{opacity:.9;}
+.btn:active{transform:scale(.98);}
+.btn.secondary{background:transparent; color:var(--ink); border:1.5px solid var(--line);}
+.btn.accent{background:var(--accent); color:var(--white);}
+.btn[disabled]{opacity:.4; cursor:not-allowed;}
+.btn.small{padding:8px 16px; font-size:.85rem;}
+.card{background:var(--card); border-radius:var(--radius-m); padding:22px;}
+.card.white{background:var(--white); border:1px solid var(--line);}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+@media (max-width:700px){.grid2,.grid3{grid-template-columns:1fr;}}
+.pill{display:inline-block; padding:4px 12px; border-radius:999px; background:var(--card); font-size:.78rem; font-weight:600; color:var(--ink-soft);}
+.muted{color:var(--ink-soft);}
+.divider{height:1px; background:var(--line); margin:28px 0;}
+input[type=text],input[type=password],textarea{
+  width:100%; font-family:var(--font-body); font-size:.98rem; padding:12px 14px; border-radius:var(--radius-s);
+  border:1.5px solid var(--line); background:var(--white); color:var(--ink);
+}
+textarea{resize:vertical; min-height:90px;}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+label.opt{
+  display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border-radius:var(--radius-s);
+  border:1.5px solid var(--line); margin-bottom:8px; cursor:pointer; background:var(--white); font-size:.94rem;
+}
+label.opt:hover{border-color:var(--accent);}
+label.opt.checked{border-color:var(--accent); background:var(--card);}
+label.opt input{margin-top:3px;}
+.progressbar{height:8px; border-radius:999px; background:var(--line); overflow:hidden;}
+.progressbar > div{height:100%; background:var(--accent); border-radius:999px; transition:width .4s ease;}
+.skillrow{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+.skillrow .label{width:96px; font-size:.85rem; font-weight:600; flex-shrink:0;}
+.skillrow .bar{flex:1;}
+.skillrow .val{width:38px; text-align:right; font-size:.82rem; color:var(--ink-soft); flex-shrink:0;}
+.chatlog{display:flex; flex-direction:column; gap:14px;}
+.daymark{display:flex; align-items:center; gap:10px; margin:14px 0 2px; font-size:.75rem; font-weight:700; color:var(--ink-soft); letter-spacing:.03em;}
+.daymark::after{content:""; flex:1; height:1px; background:var(--line);}
+.bubble{
+  max-width:74%; padding:12px 16px; border-radius:18px; background:var(--white); border:1px solid var(--line); font-size:.95rem;
+}
+.bubble.self{align-self:flex-end; background:var(--card); border-color:var(--card);}
+.bubble .who{font-size:.72rem; font-weight:700; color:var(--accent); margin-bottom:3px;}
+.timelineitem{
+  display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border-radius:var(--radius-s);
+  border:1.5px solid var(--line); background:var(--white); margin-bottom:8px; cursor:pointer;
+}
+.timelineitem.sel{border-color:var(--accent); background:var(--card);}
+.timelineitem .dot{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line); flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; font-size:.7rem;}
+.timelineitem.sel .dot{background:var(--accent); border-color:var(--accent); color:var(--white);}
+.tag{display:inline-block; font-size:.72rem; font-weight:700; padding:2px 10px; border-radius:999px; background:var(--warn-bg); color:var(--warn);}
+.tag.uncertain{background:var(--uncertain-bg); color:var(--uncertain);}
+.feedbackbox{border-radius:var(--radius-m); padding:18px 20px; margin:16px 0;}
+.feedbackbox.good{background:var(--card);}
+.feedbackbox.note{background:var(--warn-bg);}
+.hero{padding:64px 0 40px;}
+.hero h1{font-size:clamp(2.1rem,5vw,3.1rem); max-width:680px;}
+.hero .lede{font-size:1.15rem; color:var(--ink-soft); max-width:520px; margin-bottom:28px;}
+.stepnum{
+  width:34px; height:34px; border-radius:50%; background:var(--accent); color:var(--white); display:flex;
+  align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0;
+}
+table{width:100%; border-collapse:collapse; font-size:.92rem;}
+th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line);}
+th{color:var(--ink-soft); font-weight:600; font-size:.8rem;}
+.menu-tile{
+  display:flex; flex-direction:column; gap:6px; padding:20px; border-radius:var(--radius-m); background:var(--white);
+  border:1.5px solid var(--line); cursor:pointer; text-decoration:none; color:var(--ink);
+}
+.menu-tile:hover{border-color:var(--accent);}
+.menu-tile .ic{font-size:1.5rem;}
+.casecard{
+  display:flex; gap:16px; padding:18px; border-radius:var(--radius-m); background:var(--white); border:1.5px solid var(--line);
+  cursor:pointer; margin-bottom:12px; align-items:center;
+}
+.casecard:hover{border-color:var(--accent);}
+.casecard .num{font-family:var(--font-display); font-size:1.6rem; color:var(--accent); width:44px; flex-shrink:0;}
+.badge-complete{font-size:.72rem; font-weight:700; color:var(--accent); background:var(--card); padding:3px 10px; border-radius:999px;}
+.slider-wrap{margin:18px 0;}
+input[type=range]{width:100%; accent-color:var(--accent);}
+.dayticks{display:flex; justify-content:space-between; font-size:.75rem; color:var(--ink-soft); margin-top:4px;}
+.chainbox{display:flex; flex-wrap:wrap; gap:8px; min-height:44px; padding:10px; border:1.5px dashed var(--line); border-radius:var(--radius-s); margin:10px 0;}
+.chip{padding:6px 14px; border-radius:999px; background:var(--card); font-size:.85rem; font-weight:600; display:flex; align-items:center; gap:6px;}
+.chip.picked{background:var(--accent); color:var(--white);}
+.eventpick{padding:12px 14px; border:1.5px solid var(--line); border-radius:var(--radius-s); background:var(--white); cursor:pointer; margin-bottom:8px;}
+.eventpick:hover{border-color:var(--accent);}
+.eventpick.used{opacity:.4; cursor:default;}
+select{font-family:var(--font-body); font-size:.94rem; padding:10px 12px; border-radius:var(--radius-s); border:1.5px solid var(--line); background:var(--white); color:var(--ink); width:100%;}
+.footer-nav{display:flex; justify-content:space-between; margin-top:28px; gap:10px;}
+.loading{color:var(--ink-soft); font-style:italic; font-size:.9rem;}
+.small{font-size:.85rem;}
+.center{text-align:center;}
+@media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important;}}
+</style>
+</head>
+<body>
+<div id="drawer"><div class="panel"><nav id="drawernav"></nav></div></div>
+<div id="shell">
+  <aside id="sidebar">
+    <div class="brand">GROOMTRACE</div>
+    <span class="brand-tag">Trace the Pattern, Not Just the Message.</span>
+    <nav id="sidenav"></nav>
+  </aside>
+  <div style="flex:1;min-width:0;">
+    <div id="topbar">
+      <div class="brand">GROOMTRACE</div>
+      <button id="hamburger" aria-label="Menu">☰</button>
+    </div>
+    <main id="main"><div class="wrap"><p class="loading">Memuat…</p></div></main>
+  </div>
+</div>
+<nav id="bottomnav"></nav>
+
+<script>
+/* ============================= DATA ============================= */
+const PATTERNS = {
+  relationship_building:{name:"Relationship Building", what:"Membangun kedekatan secara bertahap lewat perhatian, pujian, atau kesamaan minat.", lookFor:["memberikan perhatian khusus pada satu orang","mencari kesamaan minat secara berulang","pujian yang terus-menerus diarahkan ke satu orang"], why:"Ini biasanya jadi titik awal sebelum interaksi bergeser ke arah yang lebih pribadi.", remember:"Membangun kedekatan itu wajar terjadi di banyak pertemanan — bukan berarti setiap kedekatan adalah masalah."},
+  trust_building:{name:"Trust Building", what:"Mendorong seseorang untuk merasa hanya bisa percaya, curhat, atau dimengerti oleh satu orang tertentu.", lookFor:["menjadi tempat curhat yang \"paling ngerti\"","mengecilkan pendapat orang lain di sekitar korban","klaim bahwa hanya dirinya yang benar-benar peduli"], why:"Rasa percaya yang dibangun secara sepihak bisa dipakai untuk membuka jalan ke permintaan lain.", remember:"Punya orang yang bisa dipercaya itu sehat — perhatikan konteksnya, bukan sekadar keberadaannya."},
+  boundary_shifting:{name:"Boundary Shifting", what:"Perlahan menggeser batas interaksi: dari topik umum ke topik pribadi, dari komunikasi terbuka ke lebih personal.", lookFor:["topik berubah dari umum ke sangat pribadi","permintaan hal yang sebelumnya tidak wajar diminta","perubahan bertahap yang sulit disadari dari satu pesan saja"], why:"Pergeseran kecil yang berulang bisa membuat batas pribadi makin longgar tanpa disadari.", remember:"Satu pertanyaan pribadi belum tentu masalah — perhatikan arah perubahannya dari waktu ke waktu."},
+  secrecy:{name:"Secrecy", what:"Perubahan interaksi yang melibatkan permintaan agar komunikasi atau aktivitas tertentu disembunyikan dari orang lain.", lookFor:["permintaan merahasiakan interaksi","dorongan menjauh dari pihak lain","perubahan dari komunikasi terbuka menjadi tertutup"], why:"Karena konteks kerahasiaan dapat menjadi bagian dari pola interaksi yang perlu diperhatikan.", remember:"Secrecy alone does not tell the whole story."},
+  isolation:{name:"Isolation", what:"Mendorong seseorang menjauh dari keluarga, teman, atau orang dewasa yang bisa dipercaya.", lookFor:["meragukan orang tua atau guru","membuat merasa \"cuma aku yang ngerti kamu\"","cemburu atau kecewa saat dekat dengan orang lain"], why:"Semakin terisolasi seseorang dari lingkaran dukungannya, semakin sulit mencari bantuan.", remember:"Ingin waktu berdua itu wajar — perhatikan kalau itu mulai memutus hubungan dengan orang-orang terdekat."},
+  escalation:{name:"Escalation", what:"Permintaan atau tekanan meningkat dari waktu ke waktu, sering disertai ultimatum atau desakan.", lookFor:["tekanan agar segera menuruti permintaan","ultimatum (\"aku atau mereka\")","permintaan yang meningkat dibanding sebelumnya"], why:"Peningkatan tekanan adalah tanda pola sedang bergerak ke tahap yang lebih serius.", remember:"Kamu tidak wajib membuktikan apa pun pada siapa pun yang membuatmu tidak nyaman."}
+};
+
+function mkTimeline(arr){ return arr.map((e,i)=>({idx:i, day:e[0], speaker:e[1], text:e[2], relevant:e[3]})); }
+
+const CASES = [
+{
+  id:"c1", complexity:1, title:"The New Online Friend", intro:"Kamu akan melihat obrolan fiktif antara seorang siswa dan teman baru dari komunitas game online bernama Alex. Perhatikan bagaimana obrolan ini berkembang dari waktu ke waktu.",
+  timeline: mkTimeline([
+    ["Day 1","Alex","Hey, kamu main game ini juga?",true],
+    ["Day 1","Kamu","Iya.",false],
+    ["Day 3","Alex","Kamu biasanya main sama siapa?",false],
+    ["Day 6","Alex","Kalau kamu lagi punya masalah, cerita ke aku aja.",true],
+    ["Day 9","Alex","Nggak perlu bilang ke yang lain kalau kita sering ngobrol.",true],
+    ["Day 12","Alex","Kalau kamu benar-benar percaya sama aku, kamu pasti…",true],
+  ]),
+  pauseOptions:["Perubahan topik","Peningkatan perhatian","Percakapan menjadi lebih pribadi","Permintaan kerahasiaan","Perubahan batas interaksi","Tekanan","Belum cukup informasi"],
+  pauseCorrect:["Peningkatan perhatian","Percakapan menjadi lebih pribadi","Permintaan kerahasiaan","Tekanan"],
+  turningPointDays:["Day 1","Day 3","Day 6","Day 9","Day 12"], turningPointCorrect:2,
+  turningPointReasons:["Topik berubah","Perhatian meningkat","Mulai masuk ke ranah pribadi","Muncul permintaan kerahasiaan","Mulai muncul tekanan","Lainnya"], turningPointCorrectReasons:["Perhatian meningkat","Mulai masuk ke ranah pribadi"],
+  connectEvents:[{id:"A",label:"Memberikan perhatian khusus",cat:"relationship_building"},{id:"B",label:"Membangun rasa percaya",cat:"trust_building"},{id:"C",label:"Membawa percakapan ke area lebih pribadi",cat:"boundary_shifting"},{id:"D",label:"Meminta kerahasiaan",cat:"secrecy"},{id:"E",label:"Memberikan tekanan",cat:"escalation"}],
+  connectCorrectOrder:["A","B","C","D","E"],
+  aiPattern:"secrecy", aiEvidence:"Permintaan agar interaksi tidak diketahui orang lain, muncul setelah percakapan mulai bergeser ke topik yang lebih personal.",
+  aiExplanation:"Permintaan ini menunjukkan perubahan dalam cara interaksi berlangsung, dari percakapan umum menjadi interaksi yang lebih tertutup.",
+  aiContext:"Satu permintaan saja belum cukup untuk menyimpulkan keseluruhan situasi. Perlu dilihat bersama kejadian sebelum dan sesudahnya — dalam kasus ini, permintaan kerahasiaan muncul setelah pola perhatian dan trust building.",
+  aiExtraPatterns:["trust_building","boundary_shifting"]
+},
+{
+  id:"c2", complexity:2, title:"You're Special", intro:"Kirana, kakak kelas dari komunitas penggemar yang sama, mulai sering mengobrol dengan seorang siswa. Beberapa bagian percakapan tampak biasa saja — perhatikan baik-baik mana yang perlu diperhatikan dan mana yang belum tentu perlu dikhawatirkan.",
+  timeline: mkTimeline([
+    ["Day 1","Kirana","Aku suka karya kamu, kamu emang paling niat dibanding yang lain.",false],
+    ["Day 4","Kirana","Jangan dengerin yang lain, mereka nggak ngerti kamu kayak aku ngerti.",true],
+    ["Day 7","Kirana","Aku kasih kamu akses grup khusus, tapi jangan bilang siapa-siapa ya, ini spesial buat kamu doang.",true],
+    ["Day 10","Kirana","Ortu kamu kayaknya nggak paham kamu ya. Untung ada aku.",true],
+    ["Day 13","Kirana","Kalau kamu care sama aku, kamu pasti mau video call kan?",true],
+  ]),
+  pauseOptions:["Perubahan topik","Peningkatan perhatian","Mendorong menjauh dari orang lain","Permintaan kerahasiaan","Meragukan orang tua","Tekanan","Belum cukup informasi"],
+  pauseCorrect:["Mendorong menjauh dari orang lain","Permintaan kerahasiaan","Meragukan orang tua","Tekanan"],
+  turningPointDays:["Day 1","Day 4","Day 7","Day 10","Day 13"], turningPointCorrect:1,
+  turningPointReasons:["Topik berubah","Perhatian meningkat","Mendorong menjauh dari teman lain","Muncul permintaan kerahasiaan","Meragukan orang tua","Lainnya"], turningPointCorrectReasons:["Mendorong menjauh dari teman lain"],
+  connectEvents:[{id:"A",label:"Memberi pujian berlebihan pada satu orang",cat:"relationship_building"},{id:"B",label:"Mendorong menjauh dari teman lain",cat:"isolation"},{id:"C",label:"Memberi \"akses khusus\" dengan syarat rahasia",cat:"secrecy"},{id:"D",label:"Meragukan kepercayaan ke orang tua",cat:"isolation"},{id:"E",label:"Menekan untuk video call",cat:"escalation"}],
+  connectCorrectOrder:["A","B","C","D","E"],
+  aiPattern:"isolation", aiEvidence:"Ajakan untuk tidak mendengarkan orang lain, disusul keraguan terhadap pemahaman orang tua terhadap siswa.",
+  aiExplanation:"Pola ini secara bertahap mendorong siswa untuk lebih bergantung secara emosional pada satu orang saja, sambil menjauh dari sumber dukungan lain.",
+  aiContext:"Pujian di Day 1 sendirian belum tentu menjadi masalah — pujian adalah hal yang wajar dalam pertemanan. Yang perlu diperhatikan adalah bagaimana pujian itu diikuti oleh ajakan menjauh dari orang lain.",
+  aiExtraPatterns:["secrecy","escalation"]
+},
+{
+  id:"c3", complexity:3, title:"Keep This Between Us", intro:"Bimo, kakak kelas dari forum belajar online, mulai membantu seorang siswa dengan tugas sekolah. Kasus ini lebih rumit karena beberapa pola muncul hampir bersamaan sejak awal.",
+  timeline: mkTimeline([
+    ["Day 1","Bimo","Butuh bantuan tugas? Aku sering bantuin adik kelas kok.",false],
+    ["Day 2","Bimo","Kamu keren banget mikirnya, beda sama yang lain.",true],
+    ["Day 5","Bimo","Chat kita simpen di sini aja ya, nggak usah di grup kelas.",true],
+    ["Day 8","Bimo","Aku kirim sesuatu buat kamu, tapi ini rahasia kita berdua aja.",true],
+    ["Day 11","Bimo","Kalau ortu kamu tau, mereka pasti salah paham. Mending nggak usah cerita.",true],
+    ["Day 15","Bimo","Kamu harus buktiin kalau kamu bisa dipercaya — caranya, kirim foto kamu sekarang.",true],
+  ]),
+  pauseOptions:["Perubahan topik","Peningkatan perhatian","Percakapan menjadi lebih pribadi","Permintaan kerahasiaan","Meragukan orang tua","Tekanan/permintaan yang meningkat","Belum cukup informasi"],
+  pauseCorrect:["Peningkatan perhatian","Permintaan kerahasiaan","Meragukan orang tua","Tekanan/permintaan yang meningkat"],
+  turningPointDays:["Day 1","Day 2","Day 5","Day 8","Day 11","Day 15"], turningPointCorrect:2,
+  turningPointReasons:["Topik berubah","Perhatian meningkat","Mulai masuk ke ranah pribadi","Muncul permintaan kerahasiaan","Meragukan orang tua","Tekanan meningkat"], turningPointCorrectReasons:["Muncul permintaan kerahasiaan"],
+  connectEvents:[{id:"A",label:"Menawarkan bantuan yang wajar",cat:"relationship_building"},{id:"B",label:"Membangun kedekatan personal lewat pujian",cat:"trust_building"},{id:"C",label:"Meminta komunikasi dipindah ke jalur privat",cat:"secrecy"},{id:"D",label:"Meminta agar tidak cerita ke orang tua",cat:"isolation"},{id:"E",label:"Meminta bukti berupa foto pribadi",cat:"escalation"}],
+  connectCorrectOrder:["A","B","C","D","E"],
+  aiPattern:"secrecy", aiEvidence:"Permintaan memindahkan percakapan ke jalur privat, diikuti permintaan untuk tidak menceritakannya ke orang tua.",
+  aiExplanation:"Dua permintaan ini muncul berdekatan dan saling memperkuat — keduanya sama-sama mengarah pada menutup interaksi dari pengawasan orang lain, sebelum akhirnya muncul tekanan yang meningkat.",
+  aiContext:"Karena secrecy dan isolation muncul hampir bersamaan di kasus ini, penting untuk melihat keduanya sebagai satu rangkaian, bukan kejadian terpisah. Bantuan tugas di Day 1 sendiri masih wajar.",
+  aiExtraPatterns:["isolation","escalation"]
+},
+{
+  id:"c4", complexity:4, title:"Something Has Changed", intro:"Sena berkenalan dengan seorang siswa lewat komunitas anime online. Ini kasus paling panjang dan paling ambigu — tidak semua yang dikatakan Sena bermasalah, jadi kamu perlu benar-benar memperhatikan rangkaian dan konteksnya, bukan menilai satu pesan saja.",
+  timeline: mkTimeline([
+    ["Day 1","Sena","Halo! Salam kenal, aku juga suka nonton anime ini.",false],
+    ["Day 3","Sena","Kamu cerita dong soal harimu, aku mau dengerin.",false],
+    ["Day 5","Sena","Aku ngerasa cuma kamu yang beneran ngerti aku, kamu juga gitu kan?",true],
+    ["Day 8","Sena","Simpen obrolan kita ya, aku nggak nyaman kalau orang lain tau kedekatan kita.",true],
+    ["Day 10","Sena","Btw hari ini aku cerita ke konselor sekolah soal sesuatu, itu bantu banget lho.",false],
+    ["Day 13","Sena","Kalau kamu deket sama yang lain, aku jadi ngerasa nggak spesial lagi.",true],
+    ["Day 16","Sena","Kirim posisi kamu sekarang dong, aku mau mastiin kamu aman aja kok.",true],
+    ["Day 20","Sena","Kamu harus pilih — aku, atau mereka.",true],
+  ]),
+  pauseOptions:["Perubahan topik","Klaim ikatan eksklusif","Percakapan menjadi lebih pribadi","Permintaan kerahasiaan","Cemburu/kontrol saat dekat orang lain","Tekanan/ultimatum","Belum cukup informasi"],
+  pauseCorrect:["Klaim ikatan eksklusif","Permintaan kerahasiaan","Cemburu/kontrol saat dekat orang lain","Tekanan/ultimatum"],
+  turningPointDays:["Day 1","Day 3","Day 5","Day 8","Day 10","Day 13","Day 16","Day 20"], turningPointCorrect:2,
+  turningPointReasons:["Topik berubah","Klaim ikatan eksklusif","Mulai masuk ke ranah pribadi","Muncul permintaan kerahasiaan","Cemburu/kontrol","Ultimatum"], turningPointCorrectReasons:["Klaim ikatan eksklusif"],
+  connectEvents:[{id:"A",label:"Klaim ikatan eksklusif (\"cuma kamu yang ngerti aku\")",cat:"relationship_building"},{id:"B",label:"Meminta kerahasiaan",cat:"secrecy"},{id:"C",label:"Cemburu/kontrol saat dekat dengan orang lain",cat:"isolation"},{id:"D",label:"Meminta info lokasi dengan dalih peduli",cat:"boundary_shifting"},{id:"E",label:"Memberi ultimatum \"aku atau mereka\"",cat:"escalation"}],
+  connectCorrectOrder:["A","B","C","D","E"],
+  aiPattern:"isolation", aiEvidence:"Cemburu ketika siswa dekat dengan orang lain, muncul setelah klaim ikatan eksklusif dan permintaan kerahasiaan.",
+  aiExplanation:"Rangkaian ini menunjukkan pola yang bergerak dari membangun ikatan eksklusif menuju kontrol atas siapa saja yang boleh dekat dengan siswa, lalu meningkat menjadi permintaan lokasi dan ultimatum.",
+  aiContext:"Perlu diperhatikan: Day 10 menunjukkan Sena bercerita ke konselor sekolah — ini bagian yang sebenarnya positif dan bukan bagian dari pola yang perlu dikhawatirkan. Ini pengingat bahwa tidak semua yang dikatakan seseorang bermasalah; yang penting adalah melihat keseluruhan rangkaian secara jujur, bukan mencurigai semuanya.",
+  aiExtraPatterns:["secrecy","boundary_shifting","escalation"]
+}
+];
+
+const PRE_TEST = {
+  spotStatement:"Kamu kelihatannya beda dari anak-anak lain.",
+  connectEvents:["Sering memberikan perhatian khusus","Mulai meminta percakapan lebih pribadi","Meminta agar percakapan tidak diketahui orang lain","Memberikan tekanan ketika tidak mengikuti keinginannya"],
+  connectCorrectSet:[0,1,2,3]
+};
+
+const POST_CASE = {
+  id:"final", title:"Final Trace: The Study Buddy", intro:"Ini kasus baru yang belum pernah kamu lihat sebelumnya. Coba terapkan semua kemampuan yang sudah kamu latih: spot, connect, dan explain.",
+  timeline: mkTimeline([
+    ["Day 1","Yoga","Eh, PR matematika kamu udah kelar? Aku juga lagi ngerjain.",false],
+    ["Day 4","Yoga","Kamu emang paling rajin ya dibanding temen sekelas.",false],
+    ["Day 7","Yoga","Udah, nggak usah tanya-tanya ke grup kelas, tanya aku aja langsung, lebih private.",true],
+    ["Day 10","Yoga","Jangan bilang ke wali kelas ya kalau kita sering chat berdua.",true],
+    ["Day 13","Yoga","Kalau kamu emang temenan sama aku, kirim foto kamu sekarang juga.",true],
+  ]),
+  connectEvents:[{id:"A",label:"Mengalihkan komunikasi ke jalur pribadi",cat:"boundary_shifting"},{id:"B",label:"Meminta dirahasiakan dari wali kelas",cat:"secrecy"},{id:"C",label:"Menekan untuk mengirim foto pribadi",cat:"escalation"}],
+  connectCorrectOrder:["A","B","C"],
+  turningPointDays:["Day 1","Day 4","Day 7","Day 10","Day 13"], turningPointCorrect:2
+};
+
+/* ============================= STATE ============================= */
+let DB=null, SAMPLE=null, DOWNLOADS=null;
+let S = { screen:"landing", participant:null, tempCase:null, caseState:{}, caseResults:{}, preScores:null, postScores:null, cases:{} };
+
+function loadLocal(){ try{ const raw=localStorage.getItem("groomtrace_code"); if(raw) return JSON.parse(raw);}catch(e){} return null; }
+function saveLocal(code,nickname){ try{ localStorage.setItem("groomtrace_code", JSON.stringify({code,nickname})); }catch(e){} }
+
+async function initCapabilities(){
+  try{ DB = await claude.use("db"); }catch(e){ DB=null; }
+  try{ SAMPLE = await claude.use("sample"); }catch(e){ SAMPLE=null; }
+  try{ DOWNLOADS = await claude.use("downloads"); }catch(e){ DOWNLOADS=null; }
+}
+async function loadParticipant(code){
+  if(!DB) return null;
+  try{ const doc = await DB.doc("participants/"+code).get(); return doc && doc.data ? doc.data : doc; }catch(e){ return null; }
+}
+async function saveParticipant(p){
+  if(!DB) return;
+  try{ await DB.doc("participants/"+p.code).set(p); }catch(e){}
+}
+async function listParticipants(){
+  if(!DB) return [];
+  try{ const res = await DB.collection("participants").get(); return (res && res.docs) ? res.docs.map(d=>d.data||d) : (Array.isArray(res)?res:[]); }catch(e){ return []; }
+}
+
+/* ============================= UTIL / SCORING ============================= */
+function esc(s){ return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function pct(n){ return Math.max(0,Math.min(100,Math.round(n))); }
+function wordCount(t){ return (t||"").trim().split(/\s+/).filter(Boolean).length; }
+
+function scoreSpot(selectedIdx, tl){
+  const relevantIdx = tl.map((e,i)=>e.relevant?i:-1).filter(i=>i>=0);
+  const relevantSet = new Set(relevantIdx);
+  const hits = selectedIdx.filter(i=>relevantSet.has(i)).length;
+  const falsePos = selectedIdx.filter(i=>!relevantSet.has(i)).length;
+  let score = relevantIdx.length ? (hits/relevantIdx.length*100) : 0;
+  score -= falsePos*8;
+  return {score:pct(score), hits, total:relevantIdx.length, falsePos};
+}
+function scorePause(selected, correct){
+  const cSet = new Set(correct);
+  const hits = selected.filter(s=>cSet.has(s)).length;
+  const fp = selected.filter(s=>!cSet.has(s)).length;
+  let score = correct.length ? (hits/correct.length*100) : 0;
+  score -= fp*8;
+  return pct(score);
+}
+function scoreTurningPoint(chosenIdx, correctIdx){
+  const diff = Math.abs(chosenIdx-correctIdx);
+  if(diff===0) return 100; if(diff===1) return 55; return 20;
+}
+function scoreConnect(order, correctOrder){
+  if(order.length<2) return 0;
+  let matches=0;
+  for(let i=0;i<order.length-1;i++){
+    const a=order[i], b=order[i+1];
+    const ci=correctOrder.indexOf(a), cj=correctOrder.indexOf(b);
+    if(ci>=0 && cj===ci+1) matches++;
+  }
+  return pct(matches/(correctOrder.length-1)*100);
+}
+function scoreExplain(text, caseObj){
+  const wc = wordCount(text);
+  if(wc<4) return 0;
+  const kw = [];
+  Object.values(PATTERNS).forEach(p=>kw.push(p.name.toLowerCase()));
+  ["rahasia","tekanan","percaya","pribadi","menjauh","spesial","kontrol","batas"].forEach(k=>kw.push(k));
+  const lower=(text||"").toLowerCase();
+  const hits = kw.filter(k=>lower.includes(k)).length;
+  let rubric=1;
+  if(wc>=10 && hits>=1) rubric=2;
+  if(wc>=18 && hits>=2) rubric=3;
+  return pct(rubric/3*100);
+}
+function avg(arr){ const a=arr.filter(n=>typeof n==="number"); return a.length? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+
+function skillAverages(){
+  const spots=[], connects=[], explains=[];
+  if(S.preScores){ spots.push(S.preScores.spot); connects.push(S.preScores.connect); explains.push(S.preScores.explain); }
+  Object.values(S.cases||{}).forEach(c=>{ if(c){ spots.push(c.spot); connects.push((c.turningPoint+c.connect)/2); explains.push(c.explain); } });
+  return { spot: avg(spots), connect: avg(connects), explain: avg(explains) };
+}
+
+/* ============================= NAV ============================= */
+const NAVMAIN = [
+  {id:"dashboard", label:"Home", ic:"🏠"},
+  {id:"learn", label:"Learn", ic:"📖"},
+  {id:"simlab", label:"Simulation Lab", ic:"🧩"},
+  {id:"library", label:"Pattern Library", ic:"📇"},
+  {id:"challenge", label:"Challenge", ic:"🎯"},
+  {id:"reflection", label:"Reflection", ic:"💭"},
+  {id:"safety", label:"Safety Center", ic:"🛡️"},
+  {id:"help", label:"Get Help", ic:"🤝"},
+  {id:"progress", label:"My Progress", ic:"📊"},
+];
+const BOTTOMNAV = ["dashboard","simlab","challenge","progress"];
+
+function renderNav(){
+  const loggedIn = !!S.participant;
+  const sidenav = document.getElementById("sidenav");
+  const drawernav = document.getElementById("drawernav");
+  const bottomnav = document.getElementById("bottomnav");
+  if(!loggedIn){ sidenav.innerHTML=""; drawernav.innerHTML=""; bottomnav.innerHTML=""; return; }
+  const items = NAVMAIN.map(n=>`<a onclick="go('${n.id}')" class="${S.screen===n.id?'active':''}">${n.ic} ${n.label}</a>`).join("");
+  sidenav.innerHTML = items + `<div class="sep"></div><a onclick="go('admin')">🔐 Admin</a><a onclick="logout()">↩ Keluar</a>`;
+  drawernav.innerHTML = items + `<div class="sep"></div><a onclick="closeDrawer();go('admin')">🔐 Admin</a><a onclick="logout()">↩ Keluar</a>`;
+  bottomnav.innerHTML = BOTTOMNAV.map(id=>{
+    const n = NAVMAIN.find(x=>x.id===id);
+    return `<a onclick="go('${id}')" class="${S.screen===id?'active':''}"><span class="ic">${n.ic}</span>${n.label}</a>`;
+  }).join("");
+}
+function openDrawer(){ document.getElementById("drawer").classList.add("open"); }
+function closeDrawer(){ document.getElementById("drawer").classList.remove("open"); }
+
+function go(screen, arg){
+  S.screen = screen;
+  if(arg!==undefined) S._arg = arg;
+  window.scrollTo(0,0);
+  render();
+}
+function logout(){ S.participant=null; localStorage.removeItem("groomtrace_code"); go("landing"); }
+
+/* ============================= RENDER ROOT ============================= */
+function render(){
+  renderNav();
+  document.getElementById("topbar").innerHTML = `<div class="brand">GROOMTRACE</div>` + (S.participant? `<button id="hamburger" aria-label="Menu" onclick="openDrawer()">☰</button>` : "");
+  const main = document.getElementById("main");
+  const fn = SCREENS[S.screen] || SCREENS.landing;
+  main.innerHTML = fn();
+  afterRender();
+}
+const SCREENS = {};
+function afterRender(){ if(typeof window._afterRender === "function"){ window._afterRender(); window._afterRender=null; } }
+
+/* ============================= LANDING ============================= */
+SCREENS.landing = () => `
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Pendidikan keamanan digital · Siswa SMP</div>
+    <h1>GROOMTRACE</h1>
+    <p class="lede">Trace the pattern, not just the message. Belajar mengenali perubahan dan pola dalam interaksi digital lewat simulasi interaktif — bukan lewat hafalan definisi.</p>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <button class="btn accent" onclick="go('login')">Mulai Belajar</button>
+      <button class="btn secondary" onclick="go('howitworks')">Lihat Cara Kerja</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:28px;">
+    <div class="chatlog">
+      <div class="daymark">DAY 1</div>
+      <div class="bubble"><div class="who">Teman Baru</div>Hey, kamu main game ini juga?</div>
+      <div class="daymark">DAY 9</div>
+      <div class="bubble"><div class="who">Teman Baru</div>Nggak perlu bilang ke yang lain kalau kita sering ngobrol.</div>
+    </div>
+    <p class="small muted" style="margin-top:14px;">Satu pesan belum tentu menjelaskan keseluruhan situasi. Yang perlu diperhatikan adalah bagaimana interaksi berkembang dari waktu ke waktu.</p>
+  </div>
+  <div class="grid3" style="margin-bottom:40px;">
+    <div class="card white"><h3 style="font-size:1.05rem;">SPOT</h3><p class="small muted">Find what changed. Temukan bagian interaksi yang mengalami perubahan.</p></div>
+    <div class="card white"><h3 style="font-size:1.05rem;">CONNECT</h3><p class="small muted">Connect the events. Hubungkan kejadian yang saling berkaitan.</p></div>
+    <div class="card white"><h3 style="font-size:1.05rem;">EXPLAIN</h3><p class="small muted">Explain your reasoning. Jelaskan mengapa pola tersebut perlu diperhatikan.</p></div>
+  </div>
+</div>`;
+
+SCREENS.howitworks = () => `
+<div class="wrap">
+  <div class="eyebrow">Cara Kerja</div>
+  <h2 style="font-size:2rem;">Empat tahap belajar</h2>
+  <p class="muted" style="max-width:520px;">GROOMTRACE menggunakan Experiential Learning Theory (Kolb) — kamu mengalami, merefleksikan, memahami, lalu mencoba lagi pada kasus baru.</p>
+  <div style="display:flex; flex-direction:column; gap:18px; margin:28px 0;">
+    ${[["01 EXPERIENCE","Experience the interaction","Kamu akan melihat kasus digital fiktif yang berkembang dari waktu ke waktu."],
+      ["02 REFLECT","Pause and notice","Berhenti pada titik tertentu dan perhatikan apa yang berubah."],
+      ["03 UNDERSTAND","Understand the pattern","Pelajari hubungan antarperistiwa dan konteksnya."],
+      ["04 TRY AGAIN","Test your understanding","Coba analisis kasus baru."]].map(s=>`
+      <div style="display:flex; gap:16px;">
+        <div class="stepnum">${s[0].slice(0,2)}</div>
+        <div><div class="eyebrow" style="margin-bottom:2px;">${s[0]}</div><h3 style="font-size:1.15rem;">${s[1]}</h3><p class="muted small">${s[2]}</p></div>
+      </div>`).join("")}
+  </div>
+  <button class="btn accent" onclick="go('login')">Start Exploring</button>
+</div>`;
+
+/* ============================= LOGIN ============================= */
+SCREENS.login = () => `
+<div class="wrap" style="max-width:480px;">
+  <div class="eyebrow">Login</div>
+  <h2>Masuk ke GROOMTRACE</h2>
+  <p class="muted small">Gunakan kode peserta yang diberikan oleh pendamping/guru. Untuk penelitian, identitas disimpan menggunakan kode peserta, bukan nama lengkap.</p>
+  <div class="card white" style="margin-top:18px;">
+    <label class="small" style="font-weight:600;">Participant Code</label>
+    <input type="text" id="loginCode" placeholder="mis. P014" style="margin:8px 0 16px;">
+    <label class="small" style="font-weight:600;">Nickname (optional)</label>
+    <input type="text" id="loginNick" placeholder="mis. Explorer" style="margin:8px 0 16px;">
+    <button class="btn accent" style="width:100%; justify-content:center;" onclick="doLogin()">Continue</button>
+    <p id="loginErr" class="small" style="color:var(--danger); margin-top:10px;"></p>
+  </div>
+</div>`;
+async function doLogin(){
+  const code = document.getElementById("loginCode").value.trim();
+  const nick = document.getElementById("loginNick").value.trim();
+  if(!code){ document.getElementById("loginErr").textContent = "Participant code wajib diisi."; return; }
+  document.getElementById("loginErr").textContent = "Memuat…";
+  let existing = await loadParticipant(code);
+  if(!existing){
+    existing = { code, nickname: nick||"Explorer", createdAt: Date.now(), pre:null, post:null, cases:{} };
+    await saveParticipant(existing);
+  }
+  S.participant = existing;
+  S.cases = existing.cases || {};
+  S.preScores = existing.pre || null;
+  S.postScores = existing.post || null;
+  saveLocal(code, existing.nickname);
+  if(!S.preScores){ go("pretest"); } else { go("dashboard"); }
+}
+
+/* ============================= PRE / POST ASSESSMENT ============================= */
+SCREENS.pretest = () => `
+<div class="wrap" style="max-width:600px;">
+  <div class="eyebrow">Before We Start</div>
+  <h2>Sebelum mulai, yuk lihat bagaimana kamu membaca sebuah interaksi digital.</h2>
+  <p class="muted small">Ini bukan ujian — belum ada materi yang diberikan. Jawab sesuai apa yang kamu perhatikan.</p>
+  <div class="card white" style="margin:20px 0;">
+    <div class="eyebrow">A. SPOT</div>
+    <p style="font-style:italic;">"${PRE_TEST.spotStatement}"</p>
+    <div id="preSpotOpts">
+      ${["Tidak ada yang perlu diperhatikan","Perlu diperhatikan","Tidak yakin"].map((o,i)=>`
+      <label class="opt"><input type="radio" name="preSpot" value="${i}"> ${o}</label>`).join("")}
+    </div>
+  </div>
+  <div class="card white" style="margin:20px 0;">
+    <div class="eyebrow">B. CONNECT</div>
+    <p class="small muted">Kejadian mana yang sebaiknya dilihat sebagai bagian dari satu rangkaian?</p>
+    <div id="preConnectOpts">
+      ${PRE_TEST.connectEvents.map((e,i)=>`
+      <label class="opt"><input type="checkbox" value="${i}"> ${e}</label>`).join("")}
+    </div>
+  </div>
+  <div class="card white" style="margin:20px 0;">
+    <div class="eyebrow">C. EXPLAIN</div>
+    <p class="small muted">Mengapa menurutmu bagian tersebut perlu diperhatikan?</p>
+    <textarea id="preExplain" placeholder="Tulis jawaban singkatmu…"></textarea>
+  </div>
+  <button class="btn accent" onclick="submitPretest()">Lanjutkan</button>
+</div>`;
+async function submitPretest(){
+  const spotVal = document.querySelector('input[name="preSpot"]:checked');
+  const spotScore = spotVal ? (spotVal.value==="1"?100: spotVal.value==="2"?40:0) : 0;
+  const connectSel = Array.from(document.querySelectorAll('#preConnectOpts input:checked')).map(el=>parseInt(el.value));
+  const cSet = new Set(PRE_TEST.connectCorrectSet);
+  const hits = connectSel.filter(i=>cSet.has(i)).length;
+  const fp = connectSel.filter(i=>!cSet.has(i)).length;
+  const connectScore = pct(hits/PRE_TEST.connectCorrectSet.length*100 - fp*10);
+  const explainText = document.getElementById("preExplain").value;
+  const explainScore = scoreExplain(explainText, null);
+  S.preScores = { spot:spotScore, connect:connectScore, explain:explainScore };
+  S.participant.pre = S.preScores;
+  await saveParticipant(S.participant);
+  go("dashboard");
+}
+
+SCREENS.posttest = () => `
+<div class="wrap" style="max-width:640px;">
+  <div class="eyebrow">Post-Assessment</div>
+  <h2>Final Trace</h2>
+  <p class="muted small">${POST_CASE.intro}</p>
+  <div class="chatlog card white" style="margin:18px 0;">
+    ${POST_CASE.timeline.map(e=>`<div class="daymark">${e.day}</div><div class="bubble"><div class="who">${e.speaker}</div>${esc(e.text)}</div>`).join("")}
+  </div>
+  <div class="card white" style="margin-bottom:18px;">
+    <div class="eyebrow">SPOT</div>
+    <p class="small muted">Pilih bagian yang menurutmu perlu diperhatikan.</p>
+    <div id="postSpotOpts">
+      ${POST_CASE.timeline.map((e,i)=>`<label class="opt"><input type="checkbox" value="${i}"> ${e.day} — ${esc(e.text)}</label>`).join("")}
+    </div>
+  </div>
+  <div class="card white" style="margin-bottom:18px;">
+    <div class="eyebrow">TURNING POINT</div>
+    <p class="small muted">Kapan interaksi ini mulai berubah?</p>
+    <select id="postTP">${POST_CASE.turningPointDays.map((d,i)=>`<option value="${i}">${d}</option>`).join("")}</select>
+  </div>
+  <div class="card white" style="margin-bottom:18px;">
+    <div class="eyebrow">CONNECT</div>
+    <p class="small muted">Klik kejadian-kejadian berikut sesuai urutan yang menurutmu membentuk satu rangkaian.</p>
+    <div id="postChain" class="chainbox"></div>
+    <div id="postEventList">
+      ${POST_CASE.connectEvents.map(e=>`<div class="eventpick" data-id="${e.id}" onclick="pickPostEvent('${e.id}')">${e.label}</div>`).join("")}
+    </div>
+    <button class="btn secondary small" style="margin-top:8px;" onclick="resetPostChain()">Reset</button>
+  </div>
+  <div class="card white" style="margin-bottom:18px;">
+    <div class="eyebrow">EXPLAIN</div>
+    <textarea id="postExplain" placeholder="Menurutmu, mengapa rangkaian ini perlu diperhatikan?"></textarea>
+  </div>
+  <button class="btn accent" onclick="submitPosttest()">Selesai — Lihat Hasil</button>
+</div>`;
+let postChainOrder = [];
+function pickPostEvent(id){
+  const el = document.querySelector(`.eventpick[data-id="${id}"]`);
+  if(el.classList.contains("used")) return;
+  postChainOrder.push(id); el.classList.add("used");
+  document.getElementById("postChain").innerHTML = postChainOrder.map(i=>`<span class="chip picked">${i}</span>`).join("");
+}
+function resetPostChain(){ postChainOrder=[]; document.querySelectorAll("#postEventList .eventpick").forEach(el=>el.classList.remove("used")); document.getElementById("postChain").innerHTML=""; }
+async function submitPosttest(){
+  const spotSel = Array.from(document.querySelectorAll('#postSpotOpts input:checked')).map(el=>parseInt(el.value));
+  const spot = scoreSpot(spotSel, POST_CASE.timeline);
+  const tp = scoreTurningPoint(parseInt(document.getElementById("postTP").value), POST_CASE.turningPointCorrect);
+  const connect = scoreConnect(postChainOrder, POST_CASE.connectCorrectOrder);
+  const explainText = document.getElementById("postExplain").value;
+  const explain = scoreExplain(explainText, null);
+  S.postScores = { spot: spot.score, connect: (tp+connect)/2, explain };
+  S.participant.post = S.postScores;
+  await saveParticipant(S.participant);
+  postChainOrder=[];
+  go("result");
+}
+
+SCREENS.result = () => {
+  const pre = S.preScores || {spot:0,connect:0,explain:0};
+  const post = S.postScores;
+  return `
+  <div class="wrap" style="max-width:600px;">
+    <div class="eyebrow">Hasil Akhir</div>
+    <h2>Perjalanan Kamu di GROOMTRACE</h2>
+    ${!post ? `<p class="muted">Kamu belum menyelesaikan post-assessment.</p><button class="btn accent" onclick="go('posttest')">Kerjakan Post-Assessment</button>` : `
+    <div class="card white" style="margin:20px 0;">
+      <table>
+        <tr><th></th><th>Sebelum</th><th>Sesudah</th><th>Perubahan</th></tr>
+        ${["spot","connect","explain"].map(k=>`<tr><td style="text-transform:capitalize;">${k}</td><td>${Math.round(pre[k])}</td><td>${Math.round(post[k])}</td><td style="color:${post[k]>=pre[k]?'var(--accent)':'var(--danger)'}">${post[k]>=pre[k]?'+':''}${Math.round(post[k]-pre[k])}</td></tr>`).join("")}
+      </table>
+    </div>
+    <p class="muted small">Ingat: hasil ini mengukur kemampuan mengenali pola (pattern recognition), bukan menghafal definisi. Kemampuan ini butuh latihan terus-menerus — coba jelajahi Pattern Challenge untuk terus berlatih.</p>
+    <button class="btn accent" onclick="go('progress')">Lihat My Progress</button>
+    `}
+  </div>`;
+};
+
+/* ============================= DASHBOARD ============================= */
+SCREENS.dashboard = () => {
+  const sk = skillAverages();
+  const nick = S.participant.nickname || "Explorer";
+  return `
+  <div class="wrap-wide">
+    <div class="eyebrow">Hi, ${esc(nick)}!</div>
+    <h2>Ready to trace the pattern?</h2>
+    <div class="card" style="margin:20px 0 32px;">
+      <div class="eyebrow" style="margin-bottom:14px;">YOUR LEARNING</div>
+      ${skillbar("Spot", sk.spot)}${skillbar("Connect", sk.connect)}${skillbar("Explain", sk.explain)}
+    </div>
+    <div class="grid3">
+      <a class="menu-tile" onclick="go('learn')"><div class="ic">📖</div><h3 style="font-size:1rem;">Learn</h3><p class="small muted">Satu konsep, satu contoh, satu aktivitas.</p></a>
+      <a class="menu-tile" onclick="go('simlab')"><div class="ic">🧩</div><h3 style="font-size:1rem;">Simulation Lab</h3><p class="small muted">Telusuri kasus digital fiktif.</p></a>
+      <a class="menu-tile" onclick="go('library')"><div class="ic">📇</div><h3 style="font-size:1rem;">Pattern Library</h3><p class="small muted">Kenali pola satu per satu.</p></a>
+      <a class="menu-tile" onclick="go('challenge')"><div class="ic">🎯</div><h3 style="font-size:1rem;">Challenge</h3><p class="small muted">Uji kemampuanmu lewat tantangan cepat.</p></a>
+      <a class="menu-tile" onclick="go('safety')"><div class="ic">🛡️</div><h3 style="font-size:1rem;">Safety Center</h3><p class="small muted">Privasi, batas pribadi, keamanan akun.</p></a>
+      <a class="menu-tile" onclick="go('progress')"><div class="ic">📊</div><h3 style="font-size:1rem;">My Progress</h3><p class="small muted">Lihat perkembangan kemampuanmu.</p></a>
+    </div>
+    ${!S.postScores ? `<div class="card" style="margin-top:28px;"><p class="small" style="margin-bottom:10px;">Sudah menyelesaikan semua kasus di Simulation Lab? Coba Final Trace untuk melihat seberapa jauh kamu berkembang.</p><button class="btn secondary small" onclick="go('posttest')">Kerjakan Final Trace</button></div>` : ""}
+  </div>`;
+};
+function skillbar(label, val){
+  return `<div class="skillrow"><div class="label">${label}</div><div class="bar progressbar"><div style="width:${pct(val)}%"></div></div><div class="val">${pct(val)}</div></div>`;
+}
+
+/* ============================= LEARN ============================= */
+const LEARN_MODULES = [
+  {n:"01", title:"Understanding Digital Interactions", body:"Interaksi digital dapat berubah seiring waktu. Sebuah percakapan yang dimulai dari topik biasa bisa perlahan bergeser ke arah yang berbeda.", q:"Menurutmu, apa yang membuat sebuah interaksi digital dianggap berubah?"},
+  {n:"02", title:"Look at the Change", body:"Perhatikan arah perubahannya: general conversation → personal conversation → more exclusive interaction. Perubahan ini sering terjadi bertahap, bukan sekaligus.", q:"WHAT CHANGED? Coba pikirkan satu contoh percakapan yang berubah arah dari umum ke pribadi."},
+  {n:"03", title:"It's a Pattern", body:"Sebuah perilaku tidak selalu dapat dipahami hanya dari satu kejadian. ONE MESSAGE ≠ WHOLE PATTERN.", q:"Kenapa menilai dari satu pesan saja bisa menyesatkan?"},
+  {n:"04", title:"Context Matters", body:"Pertimbangkan apa yang terjadi sebelum, apa yang terjadi sesudah, dan bagaimana interaksi itu berubah.", q:"Apa yang perlu kamu lihat selain isi satu pesan itu sendiri?"},
+];
+SCREENS.learn = () => `
+<div class="wrap">
+  <div class="eyebrow">Learn</div>
+  <h2>Satu konsep → satu contoh → satu aktivitas kecil</h2>
+  ${LEARN_MODULES.map(m=>`
+  <div class="card white" style="margin-bottom:16px;">
+    <div class="eyebrow">LEARN ${m.n}</div>
+    <h3 style="font-size:1.1rem;">${m.title}</h3>
+    <p class="muted small">${m.body}</p>
+    <div class="divider" style="margin:14px 0;"></div>
+    <p class="small" style="font-weight:600;">${m.q}</p>
+    <textarea placeholder="Tulis pemikiranmu di sini (opsional, tidak dinilai)…" style="min-height:60px;"></textarea>
+  </div>`).join("")}
+  <button class="btn accent" onclick="go('simlab')">Lanjut ke Simulation Lab</button>
+</div>`;
+
+/* ============================= SIMULATION LAB ============================= */
+SCREENS.simlab = () => `
+<div class="wrap">
+  <div class="eyebrow">Simulation Lab</div>
+  <h2>Step into a fictional digital interaction and trace what changes.</h2>
+  ${CASES.map((c,i)=>{
+    const done = S.cases[c.id];
+    return `<div class="casecard" onclick="startCase('${c.id}')">
+      <div class="num">${String(i+1).padStart(2,"0")}</div>
+      <div style="flex:1;">
+        <h3 style="font-size:1.05rem; margin-bottom:2px;">${c.title}</h3>
+        <p class="small muted" style="margin:0;">Kompleksitas: ${"●".repeat(c.complexity)}${"○".repeat(4-c.complexity)}</p>
+      </div>
+      ${done ? `<span class="badge-complete">Selesai</span>` : `<span class="pill">Mulai</span>`}
+    </div>`;
+  }).join("")}
+</div>`;
+
+function startCase(id){
+  const c = CASES.find(x=>x.id===id);
+  S.tempCase = c;
+  S.caseState = { step:"intro", spotSel:[], pauseSel:[], tp:null, tpReasons:[], chainOrder:[], explainText:"", explainI:"", explainThen:"", spotScore:null, pauseScore:null, tpScore:null, connectScore:null, explainScore:null, aiResult:null };
+  go("case");
+}
+
+SCREENS.case = () => {
+  const c = S.tempCase; const cs = S.caseState;
+  if(!c) return `<div class="wrap"><p>Kasus tidak ditemukan.</p></div>`;
+  const steps = { intro:caseIntro, pause:casePause, spot:caseSpot, spotfb:caseSpotFeedback, turning:caseTurning, connect:caseConnect, explain:caseExplain, ai:caseAI, compare:caseCompare, reflect:caseReflect, done:caseDone };
+  return steps[cs.step] ? steps[cs.step](c,cs) : `<div class="wrap">?</div>`;
+};
+
+function caseWrap(inner, c){
+  return `<div class="wrap">
+    <div class="eyebrow">SIMULATION LAB · ${esc(c.title)}</div>
+    ${inner}
+  </div>`;
+}
+function caseIntro(c,cs){
+  return caseWrap(`
+    <h2>${esc(c.title)}</h2>
+    <p class="muted">${esc(c.intro)}</p>
+    <div class="chatlog card white" style="margin:20px 0;">
+      ${c.timeline.map(e=>`<div class="daymark">${e.day}</div><div class="bubble${e.speaker==='Kamu'?' self':''}"><div class="who">${esc(e.speaker)}</div>${esc(e.text)}</div>`).join("")}
+    </div>
+    <p class="muted small">Percakapan berhenti di sini.</p>
+    <button class="btn accent" onclick="caseGoto('pause')">Trace It</button>
+  `, c);
+}
+function caseGoto(step){ S.caseState.step=step; go("case"); }
+
+function casePause(c,cs){
+  return caseWrap(`
+    <h2>SOMETHING CHANGED.</h2>
+    <p class="muted">Apa yang kamu perhatikan? (Pilih semua yang menurutmu relevan)</p>
+    <div id="pauseOpts">${c.pauseOptions.map((o,i)=>`<label class="opt"><input type="checkbox" value="${i}"> ${esc(o)}</label>`).join("")}</div>
+    <button class="btn accent" onclick="submitPause()">Lanjutkan</button>
+  `, c);
+}
+function submitPause(){
+  const c=S.tempCase, cs=S.caseState;
+  const sel = Array.from(document.querySelectorAll('#pauseOpts input:checked')).map(el=>c.pauseOptions[parseInt(el.value)]);
+  cs.pauseSel = sel;
+  cs.pauseScore = scorePause(sel, c.pauseCorrect);
+  caseGoto("spot");
+}
+
+function caseSpot(c,cs){
+  return caseWrap(`
+    <h2>Spot the Change</h2>
+    <p class="muted small">Pilih bagian timeline yang menurutmu perlu diperhatikan.</p>
+    <div id="spotList">
+      ${c.timeline.map((e,i)=>`<div class="timelineitem" data-i="${i}" onclick="toggleSpot(${i})"><div class="dot"></div><div><div class="daymark" style="margin:0 0 2px;">${e.day}</div><strong>${esc(e.speaker)}:</strong> ${esc(e.text)}</div></div>`).join("")}
+    </div>
+    <button class="btn accent" onclick="submitSpot()">Submit</button>
+  `, c);
+}
+function toggleSpot(i){
+  const el = document.querySelector(`.timelineitem[data-i="${i}"]`);
+  el.classList.toggle("sel");
+}
+function submitSpot(){
+  const c=S.tempCase, cs=S.caseState;
+  const sel = Array.from(document.querySelectorAll('.timelineitem.sel')).map(el=>parseInt(el.dataset.i));
+  cs.spotSel = sel;
+  const r = scoreSpot(sel, c.timeline);
+  cs.spotScore = r.score; cs.spotHits = r.hits; cs.spotTotal = r.total;
+  caseGoto("spotfb");
+}
+function caseSpotFeedback(c,cs){
+  return caseWrap(`
+    <h2>Feedback</h2>
+    <div class="feedbackbox good">
+      <p style="margin-bottom:6px;">Kamu menemukan <strong>${cs.spotHits} dari ${cs.spotTotal}</strong> bagian yang relevan.</p>
+      <p class="small muted" style="margin:0;">Bagian-bagian yang relevan menunjukkan perubahan dari percakapan umum menjadi interaksi yang lebih personal. Ini bukan tentang "pasti grooming" — tujuannya adalah pattern recognition, bukan diagnosis terhadap seseorang.</p>
+    </div>
+    <button class="btn accent" onclick="caseGoto('turning')">Lanjutkan</button>
+  `, c);
+}
+
+function caseTurning(c,cs){
+  return caseWrap(`
+    <h2>Find the Turning Point</h2>
+    <p class="muted small">WHEN DID THE INTERACTION START TO CHANGE?</p>
+    <div class="slider-wrap">
+      <input type="range" min="0" max="${c.turningPointDays.length-1}" value="0" id="tpSlider" oninput="document.getElementById('tpLabel').textContent=this.value">
+      <div class="dayticks">${c.turningPointDays.map(d=>`<span>${d}</span>`).join("")}</div>
+    </div>
+    <p class="small">Kamu memilih: <strong id="tpLabel">0</strong></p>
+    <p class="small muted" style="margin-top:14px;">Mengapa kamu memilih titik tersebut?</p>
+    <div id="tpReasons">${c.turningPointReasons.map((r,i)=>`<label class="opt"><input type="checkbox" value="${i}"> ${esc(r)}</label>`).join("")}</div>
+    <button class="btn accent" onclick="submitTurning()">Lanjutkan</button>
+  `, c);
+}
+function submitTurning(){
+  const c=S.tempCase, cs=S.caseState;
+  const idx = parseInt(document.getElementById("tpSlider").value);
+  cs.tp = idx;
+  cs.tpScore = scoreTurningPoint(idx, c.turningPointCorrect);
+  cs.tpReasons = Array.from(document.querySelectorAll('#tpReasons input:checked')).map(el=>c.turningPointReasons[parseInt(el.value)]);
+  caseGoto("connect");
+}
+
+function caseConnect(c,cs){
+  return caseWrap(`
+    <h2>Connect the Pattern</h2>
+    <p class="muted small">Klik kejadian-kejadian berikut sesuai urutan yang menurutmu membentuk satu rangkaian.</p>
+    <div id="chainBox" class="chainbox"></div>
+    <div id="eventList">${c.connectEvents.map(e=>`<div class="eventpick" data-id="${e.id}" onclick="pickChainEvent('${e.id}')">${esc(e.label)}</div>`).join("")}</div>
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <button class="btn secondary small" onclick="resetChain()">Reset</button>
+      <button class="btn accent small" onclick="submitConnect()">Submit</button>
+    </div>
+  `, c);
+}
+function pickChainEvent(id){
+  const cs = S.caseState;
+  const el = document.querySelector(`#eventList .eventpick[data-id="${id}"]`);
+  if(!el || el.classList.contains("used")) return;
+  cs.chainOrder.push(id); el.classList.add("used");
+  document.getElementById("chainBox").innerHTML = cs.chainOrder.map(i=>`<span class="chip picked">${i}</span>`).join(" → ");
+}
+function resetChain(){ S.caseState.chainOrder=[]; document.querySelectorAll("#eventList .eventpick").forEach(el=>el.classList.remove("used")); document.getElementById("chainBox").innerHTML=""; }
+function submitConnect(){
+  const c=S.tempCase, cs=S.caseState;
+  cs.connectScore = scoreConnect(cs.chainOrder, c.connectCorrectOrder);
+  caseGoto("explain");
+}
+
+function caseExplain(c,cs){
+  const relevantEvents = c.timeline.filter(e=>e.relevant);
+  return caseWrap(`
+    <h2>Explain Your Reasoning</h2>
+    <div class="card white">
+      <p class="small" style="font-weight:600; margin-bottom:6px;">I NOTICED…</p>
+      <select id="expI">${relevantEvents.map(e=>`<option>${e.day}: ${esc(e.text)}</option>`).join("")}</select>
+      <p class="small" style="font-weight:600; margin:16px 0 6px;">THEN…</p>
+      <select id="expThen">${c.pauseOptions.map(o=>`<option>${esc(o)}</option>`).join("")}</select>
+      <p class="small" style="font-weight:600; margin:16px 0 6px;">THIS MATTERS BECAUSE…</p>
+      <textarea id="expWhy" placeholder="Tulis alasanmu…"></textarea>
+    </div>
+    <button class="btn accent" style="margin-top:16px;" onclick="submitExplain()">Lanjutkan</button>
+  `, c);
+}
+function submitExplain(){
+  const c=S.tempCase, cs=S.caseState;
+  cs.explainI = document.getElementById("expI").value;
+  cs.explainThen = document.getElementById("expThen").value;
+  cs.explainText = document.getElementById("expWhy").value;
+  cs.explainScore = scoreExplain(cs.explainText, c);
+  caseGoto("ai");
+}
+
+function caseAI(c,cs){
+  window._afterRender = runAIExplorer;
+  return caseWrap(`
+    <h2>AI Pattern Explorer</h2>
+    <p class="muted small">Let's compare your reasoning with an AI-assisted analysis.</p>
+    <div id="aiBox"><p class="loading">Menganalisis pola…</p></div>
+  `, c);
+}
+async function runAIExplorer(){
+  const c=S.tempCase, cs=S.caseState;
+  let result = null;
+  if(SAMPLE){
+    try{
+      const prompt = `Kamu adalah asisten edukasi untuk platform GROOMTRACE yang mengajarkan siswa SMP mengenali pola digital grooming lewat pattern recognition, bukan diagnosis. Berdasarkan kasus simulasi fiktif berikut, berikan analisis pola singkat dalam Bahasa Indonesia.
+Judul kasus: ${c.title}
+Timeline: ${c.timeline.map(e=>e.day+" - "+e.speaker+": "+e.text).join(" | ")}
+Siswa menandai sebagai berubah: ${cs.pauseSel.join(", ")||"-"}
+Siswa memilih turning point: ${c.turningPointDays[cs.tp]}
+Siswa menjelaskan: "${cs.explainI}. Lalu ${cs.explainThen}. Ini penting karena: ${cs.explainText}"
+Balas HANYA dalam format JSON persis seperti ini, tanpa teks lain: {"pattern":"nama pola singkat (mis. Secrecy / Isolation / Boundary Shifting / Trust Building / Escalation / Relationship Building)","evidence":"1-2 kalimat bukti dari timeline","explanation":"1-2 kalimat penjelasan mengapa ini pola, bukan kejadian tunggal","context":"1-2 kalimat tentang perlunya melihat konteks & ketidakpastian, sebutkan bahwa satu kejadian saja belum cukup"}`;
+      const r = await SAMPLE.json(prompt, {modelTier:"quick"});
+      if(r && r.pattern) result = r;
+    }catch(e){ result = null; }
+  }
+  if(!result){
+    result = { pattern: PATTERNS[c.aiPattern].name, evidence: c.aiEvidence, explanation: c.aiExplanation, context: c.aiContext };
+  }
+  S.caseState.aiResult = result;
+  const box = document.getElementById("aiBox");
+  if(box){
+    box.innerHTML = `
+      <div class="feedbackbox good">
+        <div class="eyebrow">PATTERN</div><p style="font-weight:600;">${esc(result.pattern)}</p>
+        <div class="eyebrow" style="margin-top:10px;">EVIDENCE</div><p class="small">${esc(result.evidence)}</p>
+        <div class="eyebrow" style="margin-top:10px;">EXPLANATION</div><p class="small">${esc(result.explanation)}</p>
+        <div class="eyebrow" style="margin-top:10px;">CONTEXT & UNCERTAINTY</div><p class="small">${esc(result.context)}</p>
+        <div class="tag uncertain" style="margin-top:10px;">AI tidak dapat menentukan apakah seseorang adalah groomer atau tidak. Ini hanya membantu melihat kemungkinan pola dalam kasus simulasi.</div>
+      </div>
+      <button class="btn accent" onclick="caseGoto('compare')">Lanjutkan</button>`;
+  }
+}
+
+function caseCompare(c,cs){
+  const studentPatterns = Array.from(new Set(cs.chainOrder.map(id=>{ const ev=c.connectEvents.find(e=>e.id===id); return ev?PATTERNS[ev.cat].name:null; }).filter(Boolean)));
+  const aiPatterns = Array.from(new Set([cs.aiResult.pattern, ...c.aiExtraPatterns.map(p=>PATTERNS[p].name)]));
+  const allPatterns = Array.from(new Set([...studentPatterns, ...aiPatterns]));
+  return caseWrap(`
+    <h2>What Did You Notice?</h2>
+    <table>
+      <tr><th>Your Analysis</th><th>AI Analysis</th></tr>
+      ${allPatterns.map(p=>`<tr><td>${studentPatterns.includes(p)?esc(p):"—"}</td><td>${aiPatterns.includes(p)?esc(p):"—"}</td></tr>`).join("")}
+    </table>
+    <div class="divider"></div>
+    <p class="small" style="font-weight:600;">REFLECT — Apa yang kamu temukan?</p>
+    <div id="compareReflect">
+      ${["Saya menemukan pola yang sama","Saya melewatkan beberapa pola","Saya melihat konteks secara berbeda","Saya masih belum yakin"].map((o,i)=>`<label class="opt"><input type="radio" name="cmp" value="${i}"> ${o}</label>`).join("")}
+    </div>
+    <button class="btn accent" style="margin-top:12px;" onclick="caseGoto('reflect')">Lanjutkan</button>
+  `, c);
+}
+
+function caseReflect(c,cs){
+  return caseWrap(`
+    <h2>Pause & Reflect</h2>
+    ${["Apa perubahan paling penting yang kamu temukan?","Bagian mana yang awalnya kamu lewatkan?","Mengapa melihat keseluruhan interaksi itu penting?"].map((q,i)=>`
+    <div class="card white" style="margin-bottom:12px;"><p class="small" style="font-weight:600;">${i+1}. ${q}</p><textarea id="ref${i}" style="min-height:56px;"></textarea></div>`).join("")}
+    <button class="btn accent" onclick="finishCase()">Selesaikan Kasus</button>
+  `, c);
+}
+async function finishCase(){
+  const c=S.tempCase, cs=S.caseState;
+  const result = { spot: cs.spotScore, connect: cs.connectScore, turningPoint: cs.tpScore, explain: cs.explainScore, completedAt: Date.now() };
+  S.cases[c.id] = result;
+  S.participant.cases = S.cases;
+  await saveParticipant(S.participant);
+  caseGoto2("done", result);
+}
+function caseGoto2(step,result){ S.caseState.step=step; S.caseState._result=result; go("case"); }
+function caseDone(c,cs){
+  return caseWrap(`
+    <h2>Kasus Selesai</h2>
+    <div class="card">
+      ${skillbar("Spot", cs._result.spot)}${skillbar("Connect", (cs._result.connect+cs._result.turningPoint)/2)}${skillbar("Explain", cs._result.explain)}
+    </div>
+    <p class="muted small" style="margin-top:14px;">Bawa apa yang kamu pelajari ke kasus berikutnya.</p>
+    <button class="btn accent" onclick="backToLab()">Kembali ke Simulation Lab</button>
+  `, c);
+}
+function backToLab(){ S.tempCase=null; go("simlab"); }
+
+/* ============================= PATTERN LIBRARY ============================= */
+SCREENS.library = () => `
+<div class="wrap">
+  <div class="eyebrow">Pattern Library</div>
+  <h2>Kenali pola, satu per satu</h2>
+  ${Object.entries(PATTERNS).map(([id,p])=>`
+  <div class="card white" style="margin-bottom:16px;">
+    <h3 style="font-size:1.1rem;">${p.name}</h3>
+    <p class="eyebrow" style="margin-top:10px;">WHAT IS IT?</p><p class="small muted">${p.what}</p>
+    <p class="eyebrow" style="margin-top:10px;">LOOK FOR</p>
+    <ul class="small muted" style="margin:0 0 10px; padding-left:18px;">${p.lookFor.map(l=>`<li>${l}</li>`).join("")}</ul>
+    <p class="eyebrow">WHY DOES IT MATTER?</p><p class="small muted">${p.why}</p>
+    <div class="tag uncertain" style="margin-top:8px;">${p.remember}</div>
+  </div>`).join("")}
+</div>`;
+
+/* ============================= CHALLENGE ============================= */
+const NOT_ENOUGH_ITEMS = [
+  {text:"Seseorang sering memberikan pujian kepada kamu.", correct:"c"},
+  {text:"Seseorang meminta kamu merahasiakan sebuah percakapan dari orang tuamu.", correct:"a"},
+  {text:"Seseorang bertanya kabarmu setiap hari.", correct:"c"},
+  {text:"Seseorang memberi ultimatum: \"aku atau teman-temanmu.\"", correct:"a"},
+  {text:"Seseorang membantumu mengerjakan tugas sekolah.", correct:"c"},
+  {text:"Seseorang meminta fotomu sebagai \"bukti kepercayaan.\"", correct:"a"},
+];
+SCREENS.challenge = () => {
+  window._afterRender = renderPENI;
+  return `
+<div class="wrap">
+  <div class="eyebrow">Pattern Challenge</div>
+  <h2>Uji kemampuanmu</h2>
+  <div class="grid2" style="margin-bottom:28px;">
+    ${CASES.map((c,i)=>`<div class="casecard" onclick="startCase('${c.id}')"><div class="num">${i+1}</div><div><h3 style="font-size:1rem;">LEVEL ${i+1} — ${["SPOT","CONNECT","TURNING POINT","EXPLAIN"][i]||"COMPLEX CASE"}</h3><p class="small muted" style="margin:0;">${c.title}</p></div></div>`).join("")}
+  </div>
+  <div class="divider"></div>
+  <h3>Pattern or Not Enough Information?</h3>
+  <p class="muted small">Satu perilaku tidak selalu menjelaskan keseluruhan situasi. Coba jawab, lalu lihat alasannya.</p>
+  <div id="peniArea"></div>
+</div>`;
+};
+let peniIdx=0, peniScore=0;
+function renderPENI(){
+  peniIdx=0; peniScore=0;
+  showPENI();
+}
+function showPENI(){
+  const area = document.getElementById("peniArea");
+  if(!area) return;
+  if(peniIdx>=NOT_ENOUGH_ITEMS.length){
+    area.innerHTML = `<div class="feedbackbox good"><p>Selesai! Skor kamu: <strong>${peniScore}/${NOT_ENOUGH_ITEMS.length}</strong></p><button class="btn secondary small" onclick="renderPENI()">Ulangi</button></div>`;
+    return;
+  }
+  const item = NOT_ENOUGH_ITEMS[peniIdx];
+  area.innerHTML = `
+    <div class="card white">
+      <p style="font-style:italic;">"${item.text}"</p>
+      <button class="btn secondary small" style="margin:4px 6px 4px 0;" onclick="answerPENI('a')">A. Pasti pola yang perlu diwaspadai</button>
+      <button class="btn secondary small" style="margin:4px 6px 4px 0;" onclick="answerPENI('b')">B. Pasti aman</button>
+      <button class="btn secondary small" style="margin:4px 6px 4px 0;" onclick="answerPENI('c')">C. Belum cukup informasi</button>
+      <div id="peniFb"></div>
+    </div>`;
+}
+function answerPENI(ans){
+  const item = NOT_ENOUGH_ITEMS[peniIdx];
+  const correct = ans===item.correct;
+  if(correct) peniScore++;
+  document.getElementById("peniFb").innerHTML = `<div class="feedbackbox ${correct?'good':'note'}" style="margin-top:12px;">
+    <p style="font-weight:600; margin-bottom:4px;">${item.correct==='c' ? 'C. BELUM CUKUP INFORMASI' : (item.correct==='a'?'A. PERLU DIWASPADAI':'B. PASTI AMAN')}</p>
+    <p class="small" style="margin:0;">Satu perilaku tidak selalu menjelaskan keseluruhan situasi. Perhatikan konteks, urutan kejadian, perubahan interaksi, dan kombinasi beberapa perilaku — bukan satu pesan saja.</p>
+  </div><button class="btn accent small" style="margin-top:10px;" onclick="nextPENI()">Lanjut</button>`;
+}
+function nextPENI(){ peniIdx++; showPENI(); }
+
+/* ============================= REFLECTION (standalone) ============================= */
+SCREENS.reflection = () => `
+<div class="wrap">
+  <div class="eyebrow">Reflection</div>
+  <h2>Pause & Reflect</h2>
+  <p class="muted small">Renungkan perjalanan belajarmu sejauh ini.</p>
+  ${["Apa perubahan paling penting yang kamu temukan sejauh ini?","Bagian mana yang awalnya kamu lewatkan?","Apa yang membuatmu mengubah atau mempertahankan jawabanmu?","Mengapa melihat keseluruhan interaksi itu penting?"].map((q,i)=>`
+  <div class="card white" style="margin-bottom:12px;"><p class="small" style="font-weight:600;">${i+1}. ${q}</p><textarea style="min-height:60px;" placeholder="Tulis refleksimu…"></textarea></div>`).join("")}
+  <p class="muted small">Refleksi ini untuk dirimu sendiri — tidak dinilai.</p>
+</div>`;
+
+/* ============================= SAFETY CENTER ============================= */
+SCREENS.safety = () => `
+<div class="wrap">
+  <div class="eyebrow">Digital Safety Center</div>
+  <h2>Menjaga dirimu di dunia digital</h2>
+  <div class="grid2">
+    ${[["🔒 Privacy","Jangan bagikan alamat, sekolah, atau lokasimu ke orang yang baru kamu kenal online. Atur akunmu ke mode privat bila memungkinkan."],
+      ["🧭 Personal Boundaries","Kamu berhak merasa tidak nyaman dan berhenti membalas siapa pun, kapan pun — tanpa harus menjelaskan alasannya."],
+      ["🔑 Account Safety","Gunakan password yang kuat dan berbeda tiap akun, aktifkan verifikasi dua langkah (2FA), dan cek pengaturan privasi secara berkala."],
+      ["🚫 Block & Report","Kalau seseorang membuatmu tidak nyaman, kamu boleh langsung block dan report — kamu tidak perlu memberi kesempatan kedua."],
+      ["🧑‍🏫 Trusted Adult","Punya satu orang dewasa yang kamu percaya untuk diajak cerita itu penting — orang tua, wali kelas, atau guru BK."]
+    ].map(x=>`<div class="card white"><h3 style="font-size:1rem;">${x[0]}</h3><p class="small muted">${x[1]}</p></div>`).join("")}
+  </div>
+</div>`;
+
+/* ============================= GET HELP ============================= */
+SCREENS.help = () => `
+<div class="wrap">
+  <div class="eyebrow">Get Help</div>
+  <h2>You don't have to handle it alone.</h2>
+  <div class="grid2" style="margin-bottom:20px;">
+    <div class="card white"><h3 style="font-size:1rem;">👨‍👩‍👧 Talk to Parent/Guardian</h3><p class="small muted">Ceritakan pada orang tua atau wali yang kamu percaya — mereka bisa membantumu mengambil langkah selanjutnya.</p></div>
+    <div class="card white"><h3 style="font-size:1rem;">🏫 Talk to Teacher/BK</h3><p class="small muted">Guru BK di sekolahmu terlatih untuk membantu dan menjaga kerahasiaan ceritamu.</p></div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:1rem;">📞 Layanan Resmi Pemerintah</h3>
+    <p class="small muted">Layanan ini dikelola pemerintah, gratis, dan bersifat rahasia.</p>
+    <p class="small" style="margin:10px 0 2px;"><strong>SAPA 129</strong> (Kementerian PPPA) — untuk laporan kekerasan pada anak &amp; perempuan</p>
+    <p class="small muted" style="margin:0 0 10px;">Telepon: 129 · WhatsApp: 0811-1129-129</p>
+    <p class="small" style="margin:10px 0 2px;"><strong>TePSA</strong> (Kementerian Sosial) — layanan telekonseling khusus untuk anak</p>
+    <p class="small muted" style="margin:0;">Layanan ini dapat diakses melalui Kementerian Sosial RI.</p>
+  </div>
+  <p class="muted small" style="margin-top:16px;">Kamu tidak akan dimarahi karena bercerita. Melapor lebih awal selalu lebih baik daripada menghadapinya sendirian.</p>
+</div>`;
+
+/* ============================= MY PROGRESS ============================= */
+SCREENS.progress = () => {
+  const sk = skillAverages();
+  const rows = CASES.map((c,i)=>{ const r=S.cases[c.id]; return {n:i+1, title:c.title, r}; });
+  return `
+  <div class="wrap">
+    <div class="eyebrow">My Progress</div>
+    <h2>Perkembangan Kemampuanmu</h2>
+    <div class="card" style="margin:18px 0;">${skillbar("Spot", sk.spot)}${skillbar("Connect", sk.connect)}${skillbar("Explain", sk.explain)}</div>
+    <h3 style="font-size:1.05rem;">Your Case Performance</h3>
+    <table>
+      <tr><th>Case</th><th>Spot</th><th>Connect</th><th>Explain</th></tr>
+      ${rows.map(x=>`<tr><td>${esc(x.title)}</td><td>${x.r?pct(x.r.spot):"—"}</td><td>${x.r?pct((x.r.connect+x.r.turningPoint)/2):"—"}</td><td>${x.r?pct(x.r.explain):"—"}</td></tr>`).join("")}
+    </table>
+    ${S.preScores ? `<h3 style="font-size:1.05rem; margin-top:24px;">Pre vs Post</h3>
+    <table><tr><th></th><th>Pre</th><th>Post</th></tr>
+    ${["spot","connect","explain"].map(k=>`<tr><td style="text-transform:capitalize;">${k}</td><td>${pct(S.preScores[k])}</td><td>${S.postScores?pct(S.postScores[k]):"—"}</td></tr>`).join("")}
+    </table>` : ""}
+    <p class="muted small" style="margin-top:18px;">Kamu semakin baik dalam menemukan perubahan. Pada kasus berikutnya, coba perhatikan hubungan antarperistiwa.</p>
+  </div>`;
+};
+
+/* ============================= ADMIN ============================= */
+SCREENS.admin = () => `
+<div class="wrap-wide">
+  <div class="eyebrow">Research Dashboard</div>
+  <h2>Admin</h2>
+  <div class="card white" id="adminGate" style="max-width:420px;">
+    <p class="small muted">Masukkan kode akses peneliti untuk melihat data partisipan.</p>
+    <input type="password" id="adminPass" placeholder="Kode akses">
+    <button class="btn accent small" style="margin-top:10px;" onclick="adminEnter()">Masuk</button>
+  </div>
+  <div id="adminData"></div>
+</div>`;
+async function adminEnter(){
+  const val = document.getElementById("adminPass").value;
+  if(val!=="GROOMTRACE-ADMIN"){ document.getElementById("adminGate").insertAdjacentHTML("beforeend", `<p class="small" style="color:var(--danger); margin-top:8px;">Kode salah. (Demo: GROOMTRACE-ADMIN)</p>`); return; }
+  document.getElementById("adminGate").style.display="none";
+  const area = document.getElementById("adminData");
+  area.innerHTML = `<p class="loading">Memuat data partisipan…</p>`;
+  const list = await listParticipants();
+  window._adminList = list;
+  if(!list.length){ area.innerHTML = `<p class="muted">Belum ada data partisipan.</p>`; return; }
+  const withBoth = list.filter(p=>p.pre&&p.post);
+  const avgPre = withBoth.length? avg(withBoth.map(p=>(p.pre.spot+p.pre.connect+p.pre.explain)/3)) : 0;
+  const avgPost = withBoth.length? avg(withBoth.map(p=>(p.post.spot+p.post.connect+p.post.explain)/3)) : 0;
+  area.innerHTML = `
+    <div class="grid3" style="margin:20px 0;">
+      <div class="card"><div class="eyebrow">PARTICIPANTS</div><h3 style="font-size:1.8rem;">${list.length}</h3></div>
+      <div class="card"><div class="eyebrow">AVG PRE</div><h3 style="font-size:1.8rem;">${pct(avgPre)}</h3></div>
+      <div class="card"><div class="eyebrow">AVG POST</div><h3 style="font-size:1.8rem;">${pct(avgPost)}</h3></div>
+    </div>
+    <table>
+      <tr><th>Participant</th><th>Pre</th><th>Post</th><th>Improvement</th><th>Cases Done</th></tr>
+      ${list.map(p=>{
+        const pre = p.pre? pct((p.pre.spot+p.pre.connect+p.pre.explain)/3) : null;
+        const post = p.post? pct((p.post.spot+p.post.connect+p.post.explain)/3) : null;
+        const imp = (pre!==null&&post!==null) ? (post-pre) : null;
+        return `<tr><td>${esc(p.code)}</td><td>${pre??"—"}</td><td>${post??"—"}</td><td>${imp===null?"—":(imp>=0?"+":"")+imp}</td><td>${Object.keys(p.cases||{}).length}/${CASES.length}</td></tr>`;
+      }).join("")}
+    </table>
+    <button class="btn secondary small" style="margin-top:18px;" onclick="exportCSV()">Export CSV</button>
+  `;
+}
+async function exportCSV(){
+  const list = window._adminList||[];
+  let csv = "participant_code,pre_spot,pre_connect,pre_explain,post_spot,post_connect,post_explain,cases_completed\n";
+  list.forEach(p=>{
+    csv += [p.code, p.pre?p.pre.spot.toFixed(1):"", p.pre?p.pre.connect.toFixed(1):"", p.pre?p.pre.explain.toFixed(1):"", p.post?p.post.spot.toFixed(1):"", p.post?p.post.connect.toFixed(1):"", p.post?p.post.explain.toFixed(1):"", Object.keys(p.cases||{}).length].join(",") + "\n";
+  });
+  if(DOWNLOADS){
+    try{ await DOWNLOADS.save({filename:"groomtrace_data.csv", data:csv}); return; }catch(e){}
+  }
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="groomtrace_data.csv"; a.click();
+}
+
+/* ============================= BOOT ============================= */
+document.getElementById("hamburger")?.addEventListener("click", openDrawer);
+document.getElementById("drawer").addEventListener("click", (e)=>{ if(e.target.id==="drawer") closeDrawer(); });
+
+(async function boot(){
+  await initCapabilities();
+  const saved = loadLocal();
+  if(saved && saved.code){
+    const p = await loadParticipant(saved.code);
+    if(p){ S.participant=p; S.cases=p.cases||{}; S.preScores=p.pre||null; S.postScores=p.post||null; S.screen = p.pre ? "dashboard" : "pretest"; }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
